@@ -6,7 +6,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // Gemini Configuration
 // Ensure GEMINI_API_KEY is set in your .env file
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 // System Prompt for Gemini to give it context about VillageFlow
 const getSystemPrompt = (lang) => {
@@ -38,7 +38,7 @@ const getSystemPrompt = (lang) => {
 // Chat endpoint
 router.post('/chat', async (req, res) => {
     try {
-        const { message, userRole = 'citizen', lang = 'si' } = req.body;
+        let { message, userRole = 'citizen', lang = 'si' } = req.body;
         
         console.log(`📨 Chat (AI) - Lang: ${lang}, Role: ${userRole}, Msg: "${message?.substring(0, 50)}..."`);
         
@@ -75,8 +75,11 @@ router.post('/chat', async (req, res) => {
     } catch (error) {
         console.error('❌ Gemini Error:', error.message);
         
+        // Use req.body.lang if lang is not yet defined
+        const currentLang = req.body.lang || 'si';
+        
         // Return a helpful fallback message if Gemini fails (e.g. quota limit)
-        const fallback = lang === 'si' 
+        const fallback = currentLang === 'si' 
             ? "සමාවන්න, සේවාදායකයේ කාර්යබහුල තාවයක් පවතී. කරුණාකර සුළු මොහොතකින් නැවත උත්සාහ කරන්න." 
             : "Sorry, I'm having trouble connecting to my brain right now. Please try again in a moment.";
             
