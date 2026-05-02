@@ -11,6 +11,10 @@ const nodemailer = require('nodemailer');
 // EMAIL_USER and EMAIL_PASS are stored in .env file (not committed to GitHub)
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    family: 4,
     auth: {
         user: (process.env.EMAIL_USER || '').trim(),
         pass: (process.env.EMAIL_PASS || '').replace(/\s+/g, '')
@@ -102,7 +106,7 @@ router.post('/add', async (req, res) => {
 // PUT update
 router.put('/update/:id', async (req, res) => {
     try {
-        const updated = await Welfare.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updated = await Welfare.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
         res.json(updated);
     } catch (err) {
         res.status(500).json({ error: "යාවත්කාලීන කිරීම අසාර්ථකයි" });
@@ -240,7 +244,7 @@ router.put('/user-edit/:id', upload.single('paySlip'), async (req, res) => {
         const updated = await Welfare.findByIdAndUpdate(
             id, 
             { $set: updateData, $push: { editHistory: { editedAt: new Date(), editedBy: userId, changes: updateData } } }, 
-            { new: true }
+            { returnDocument: 'after' }
         );
         res.json({ message: "අයදුම්පත සාර්ථකව යාවත්කාලීන කළා", application: updated });
     } catch (err) {
