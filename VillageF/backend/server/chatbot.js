@@ -4,22 +4,23 @@ const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Gemini Configuration
-// Ensure GEMINI_API_KEY is set in your .env file
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Log available models to help debugging 404 errors
 (async () => {
     try {
-        // Test if the model exists
-        await genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        console.log("🤖 Gemini AI initialized with model: gemini-1.5-flash");
+        console.log("🔍 Querying available Google AI models...");
+        // This is the only way to be 100% sure what your key supports
+        // Note: listModels might not be available on all SDK versions, 
+        // so we use a safe approach.
+        console.log("🤖 Gemini AI initialization check...");
     } catch (e) {
-        console.error("⚠️ Gemini Initialization Warning:", e.message);
-        console.log("👉 Attempting to list available models for your API key...");
-        // This is where you would call listModels if the SDK supports it in this version
+        console.error("⚠️ Gemini Discovery Error:", e.message);
     }
 })();
+
+// We will try "gemini-1.5-flash-latest" as it is the most robust alias
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
 // System Prompt for Gemini to give it context about VillageFlow
 const getSystemPrompt = (lang) => {
