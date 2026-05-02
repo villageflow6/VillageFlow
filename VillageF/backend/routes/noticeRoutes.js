@@ -31,6 +31,10 @@ router.post('/add', async (req, res) => {
         // --- Email Logic (Using .env) ---
         const transporter = nodemailer.createTransport({
             service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            family: 4,
             auth: {
                 user: (process.env.EMAIL_USER || '').trim(),
                 pass: (process.env.EMAIL_PASS || '').replace(/\s+/g, '')
@@ -76,7 +80,7 @@ router.put('/update/:id', async (req, res) => {
         const updatedNotice = await Notice.findByIdAndUpdate(
             req.params.id,
             req.body, // පහසුව සඳහා req.body සම්පූර්ණයෙන්ම ලබා ගත හැක
-            { new: true }
+            { returnDocument: 'after' }
         );
         res.json(updatedNotice);
     } catch (err) {
