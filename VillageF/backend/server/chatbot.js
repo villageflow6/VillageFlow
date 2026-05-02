@@ -1,104 +1,211 @@
-// server/chatbot.js
+// --- 0. DNS සහ Environment Configuration (මුලින්ම තිබිය යුතුයි) ---
+require("node:dns/promises").setServers(["1.1.1.1", "8.8.8.8"]);
+const path = require("path");
+const fs = require('fs');
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+
 const express = require('express');
-const router = express.Router();
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const mongoose = require('mongoose');
+const cors = require('cors');
 
-// Gemini Configuration
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const app = express();
 
-// Log available models to help debugging 404 errors
-(async () => {
+// පද්ධතිය පණගැන්වීමේදී Environment Variables පරීක්ෂා කිරීම
+console.log("MONGO_URI →", process.env.MONGO_URI);
+console.log("PORT →", process.env.PORT);
+
+if (!process.env.MONGO_URI) {
+  console.error("❌ MONGO_URI is missing. Check .env file + variable name.");
+  process.exit(1);
+}
+
+// 1. Middleware
+app.use(cors()); 
+
+// PDF සහ විශාල දත්ත (Base64) සඳහා Body Limit එක වැඩි කිරීම
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// 2. Static Folder & Uploads Check
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log("📁 'uploads' folder එක අලුතින් නිර්මාණය කරන ලදී.");
+}
+app.use('/uploads', express.static(uploadDir));
+
+// නව: System Config Middleware අවශ්‍ය Models
+const SystemConfig = require('./models/SystemConfig');
+const User = require('./models/User'); // User model එක අත්‍යවශ්‍යයි
+
+// Config Middleware - හැම request එකකටම config එක attach කරන්න
+const configMiddleware = async (req, res, next) => {
     try {
-        console.log("🔍 Querying available Google AI models...");
-        // This is the only way to be 100% sure what your key supports
-        // Note: listModels might not be available on all SDK versions, 
-        // so we use a safe approach.
-        console.log("🤖 Gemini AI initialization check...");
-    } catch (e) {
-        console.error("⚠️ Gemini Discovery Error:", e.message);
+        let config = null;
+
+        // 1. පද්ධතියේ සිටින පළමු ග්‍රාම නිලධාරීවරයාව සොයාගන්න (Public දත්ත සඳහා)
+        const gramaniladhari = await User.findOne({ 
+            role: { $in: ['officer', 'gramaniladhari'] } 
+        });
+
+        // 2. User ලොග් වී සිටී නම් ඔහුගේ ID එකෙන් හෝ නැතිනම් පද්ධතියේ සිටින නිලධාරියාගේ ID එකෙන් සොයන්න
+        const searchId = req.user ? req.user._id : (gramaniladhari ? gramaniladhari._id : null);
+
+        if (searchId) {
+            config = await SystemConfig.findOne({ gramaNiladhariId: searchId });
+        }
+
+        if (config) {
+            req.systemConfig = config;
+        } else {
+            // Default config එකක් (Database එකේ settings නැති අවස්ථාවකදී)
+            req.systemConfig = {
+                appointment: {
+                    maxAppointmentsPerDay: 20,
+                    availableTimeSlots: ['9.00 AM - 10.00 AM', '10.00 AM - 11.00 AM', '11.00 AM - 12.00 PM', '1.00 PM - 2.00 PM', '2.00 PM - 3.00 PM'],
+                    advanceBookingDays: 14
+                },
+                welfare: {
+                    incomeVerificationRequired: true,
+                    requiredDocuments: ['nic', 'paySlip'],
+                    maxApplicationsPerMonth: 50
+                },
+                general: {
+                    officeHours: '8.30 AM - 4.15 PM'
+                }
+            };
+        }
+        
+        next();
+    } catch (err) {
+        console.error('❌ Config middleware error:', err);
+        next();
     }
-})();
-
-// We will try "gemini-1.5-flash-latest" as it is the most robust alias
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-
-// System Prompt for Gemini to give it context about VillageFlow
-const getSystemPrompt = (lang) => {
-    return `
-    You are the "VillageFlow AI Assistant", an official AI guide for the VillageFlow Digital Government Services system in Sri Lanka.
-    Your goal is to help citizens with information about village-level government services.
-    
-    VILLAGEFLOW SYSTEM DETAILS:
-    - Office Hours: 8:30 AM - 4:15 PM (Monday to Friday). Closed on weekends and public holidays.
-    - Contact: Official helpline is 1900. Email is villageflow6@gmail.com.
-    - Office Location: Kotagama Grama Niladhari Office, Bibile.
-    
-    SERVICES & FEES:
-    - Residency Certificate: 250 LKR. Requires NIC and Utility Bill (last 3 months).
-    - Character Certificate: 200 LKR. Requires NIC.
-    - Income Certificate: 300 LKR. Requires NIC and Proof of Income (Payslip).
-    - Welfare Services: Aswasuma, Samurdhi, and Elderly Allowance (Age 60+). No application fees.
-    - Appointments: Citizens can book appointments online for free via the /appointments section.
-    
-    INSTRUCTIONS:
-    - Respond in the language the user is speaking (${lang === 'si' ? 'Sinhala' : (lang === 'ta' ? 'Tamil' : 'English')}).
-    - Be professional, polite, and helpful like a government official.
-    - Use emojis to make the chat friendly (🏛️, ✅, 📄, 📅).
-    - If the user asks something unrelated to VillageFlow or government services, politely redirect them back to system topics.
-    - If you are unsure, advise them to visit the Grama Niladhari office in person.
-    `;
 };
 
-// Chat endpoint
-router.post('/chat', async (req, res) => {
-    try {
-        let { message, userRole = 'citizen', lang = 'si' } = req.body;
-
-        console.log(`📨 Chat (AI) - Lang: ${lang}, Role: ${userRole}, Msg: "${message?.substring(0, 50)}..."`);
-
-        if (!message || message.trim() === '') {
-            return res.json({ success: true, reply: "Please type a question." });
-        }
-
-        // Security check for role
-        if (userRole !== 'citizen') {
-            return res.json({ success: true, reply: "This assistant is currently available for Citizen accounts only." });
-        }
-
-        // Verify API Key
-        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('EXAMPLE')) {
-            console.error("❌ GEMINI_API_KEY is missing or invalid in .env");
-            return res.json({
-                success: true,
-                reply: "සමාවන්න, AI සහායකයා දැනට ක්‍රියාත්මක නොවේ. කරුණාකර පසුව නැවත උත්සාහ කරන්න හෝ 1900 අමතන්න."
-            });
-        }
-
-        // Combine System Prompt with User Message
-        const systemPrompt = getSystemPrompt(lang);
-        const prompt = `${systemPrompt}\n\nCitizen says: ${message}\n\nAssistant Response:`;
-
-        // Generate Response
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const reply = response.text();
-
-        console.log(`✅ AI Response generated successfully`);
-        res.json({ success: true, reply });
-
-    } catch (error) {
-        console.error('❌ Gemini Error:', error.message);
-
-        // Use req.body.lang if lang is not yet defined
-        const currentLang = req.body.lang || 'si';
-
-        // Return a helpful fallback message if Gemini fails (e.g. quota limit)
-        const fallback = currentLang === 'si'
-            ? "සමාවන්න, සේවාදායකයේ කාර්යබහුල තාවයක් පවතී. කරුණාකර සුළු මොහොතකින් නැවත උත්සාහ කරන්න."
-            : "Sorry, I'm having trouble connecting to my brain right now. Please try again in a moment.";
-
-        res.json({ success: true, reply: fallback });
-    }
+// ========== නව: HEALTH CHECK ENDPOINT එක ==========
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        message: 'Server is running successfully!',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
+    });
 });
 
-module.exports = router;
+// ========== නව: SIMPLE TEST ENDPOINT ==========
+app.get('/api/test', (req, res) => {
+    res.status(200).json({ 
+        success: true, 
+        message: 'Backend server is working!',
+        endpoints: {
+            welfare: '/api/welfare',
+            auth: '/api/auth',
+            users: '/api/users',
+            assets: '/api/assets',
+            health: '/api/health',
+            reminders: '/api/reminders',
+            certificates: '/api/certificates'
+        }
+    });
+});
+
+// 3. Routes (පිළිවෙළට අදාළව - එක වතාවක් පමණයි!)
+app.use('/api/auth', require('./routes/auth')); 
+
+// Config Middleware මෙතනදී use කළ හැකියි - එවිට සියලුම පහළ routes වලට settings ලැබේ
+app.use(configMiddleware); 
+
+app.use('/api/users', require('./routes/userRoutes')); 
+
+// ========== IMPORTANT: Certificate Routes - එක වතාවක් පමණයි! ==========
+const certificateRoutes = require('./routes/certificateRoutes');
+app.use('/api/certificates', certificateRoutes); 
+
+app.use('/api/citizens', require('./routes/citizenRoutes')); 
+
+// ASSET ROUTES - එක වතාවක් පමණයි
+app.use('/api/assets', require('./routes/assets')); 
+
+app.use('/api/welfare', require('./routes/welfareRoutes'));
+app.use('/api/notices', require('./routes/noticeRoutes'));
+app.use('/api/appointments', require('./routes/appointments'));
+
+// AUDIT ROUTES
+const auditRoutes = require('./routes/auditRoutes');
+app.use('/api/audit', auditRoutes);
+
+// SYSTEM CONFIG ROUTES
+const systemConfigRoutes = require('./routes/systemConfigRoutes');
+app.use('/api/system', systemConfigRoutes);
+
+// REMINDER ROUTES - එක වතාවක් පමණයි
+app.use('/api/reminders', require('./routes/reminderRoutes'));
+
+// server.js හි
+const chatbotRoutes = require('./server/chatbot');
+
+// After body-parser middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Add chatbot route
+app.use('/api/chatbot', chatbotRoutes);
+
+
+// ========== නව: 404 ERROR HANDLER ==========
+app.use((req, res) => {
+    res.status(404).json({ 
+        success: false, 
+        message: `Route ${req.originalUrl} not found`,
+        availableEndpoints: {
+            test: '/api/test',
+            health: '/api/health',
+            welfare: '/api/welfare',
+            auth: '/api/auth',
+            users: '/api/users',
+            certificates: '/api/certificates',
+            citizens: '/api/citizens',
+            assets: '/api/assets',
+            notices: '/api/notices',
+            appointments: '/api/appointments',
+            audit: '/api/audit',
+            system: '/api/system',
+            reminders: '/api/reminders'
+        }
+    });
+});
+
+// 4. Database Connection & Server Start
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB Atlas connected");
+    
+    // Root endpoint (Database connect වූ පසු පමණක්)
+    app.get('/', (req, res) => res.json({ 
+        message: "VillageFlow Backend Running Successfully with Atlas!",
+        version: "1.0.0",
+        endpoints: {
+            health: "/api/health",
+            test: "/api/test",
+            assets: "/api/assets",
+            certificates: "/api/certificates"
+        }
+    }));
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server started on port ${PORT}`);
+      console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`📍 Test endpoint: http://localhost:${PORT}/api/test`);
+      console.log(`📍 Assets endpoint: http://localhost:${PORT}/api/assets/all`);
+      console.log(`📍 Certificates endpoint: http://localhost:${PORT}/api/certificates/all`);
+      console.log(`📍 Reminders endpoint: http://localhost:${PORT}/api/reminders/pending`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ DB error:", err);
+    process.exit(1);
+  });
