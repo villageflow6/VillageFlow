@@ -23,7 +23,7 @@ router.get('/pending', async (req, res) => {
 
 router.put('/mark-sent/:id', async (req, res) => {
     try {
-        const reminder = await MaintenanceReminder.findByIdAndUpdate(req.params.id, { isSent: true, sentDate: new Date() }, { new: true });
+        const reminder = await MaintenanceReminder.findByIdAndUpdate(req.params.id, { isSent: true, sentDate: new Date() }, { returnDocument: 'after' });
         res.json(reminder);
     } catch (err) {
         res.status(500).json({ error: err.message });
