@@ -8,19 +8,17 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 
 // --- EMAIL CONFIGURATION (Credentials from .env file) ---
-// EMAIL_USER and EMAIL_PASS are stored in .env file (not committed to GitHub)
-// --- EMAIL CONFIGURATION ---
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // direct host එක දෙන්න
-    port: 465,              // SSL සඳහා 465
-    secure: true,           // port 465 නිසා මේක true වෙන්න ඕනේ
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Port 587 සඳහා මේක false විය යුතුයි
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    family: 4,               // මේකෙන් IPv6 මඟ හරිනවා
+    family: 4, // IPv4 තවදුරටත් අවශ්‍යයි
     tls: {
-        rejectUnauthorized: false // Cloud connectivity වලදී එන certificate errors මඟ හරින්න
+        rejectUnauthorized: false // Timeout එක මඟහරවා ගැනීමට උදව් වේ
     }
 });
 
