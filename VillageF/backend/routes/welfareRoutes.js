@@ -9,11 +9,17 @@ const nodemailer = require('nodemailer');
 
 // --- EMAIL CONFIGURATION (Credentials from .env file) ---
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
-        user: (process.env.EMAIL_USER || '').trim(),
-        pass: (process.env.EMAIL_PASS || '').replace(/\s+/g, '')
-    }
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    // මේ ටික අනිවාර්යයෙන්ම දාන්න
+    connectionTimeout: 20000, // තත්පර 20ක් දෙන්න
+    greetingTimeout: 20000,
+    family: 4
 });
 const sendStatusEmail = async (userEmail, userName, type, status) => {
     try {
