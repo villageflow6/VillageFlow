@@ -10,11 +10,14 @@ const nodemailer = require('nodemailer');
 // --- EMAIL CONFIGURATION (Credentials from .env file) ---
 // EMAIL_USER and EMAIL_PASS are stored in .env file (not committed to GitHub)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // SSL පාවිච්චි කරයි
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    family: 4
 });
 
 const sendStatusEmail = async (userEmail, userName, type, status) => {
