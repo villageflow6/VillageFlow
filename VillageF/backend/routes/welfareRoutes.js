@@ -9,21 +9,12 @@ const nodemailer = require('nodemailer');
 
 // --- EMAIL CONFIGURATION (Credentials from .env file) ---
 const transporter = nodemailer.createTransport({
-    // smtp.gmail.com වෙනුවට කෙලින්ම IPv4 address එකක් පාවිච්චි කරන්න
-    host: '74.125.136.108', 
-    port: 465,
-    secure: true,
+    service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    // Server එකේ නම (Certificates) තහවුරු කිරීමට මේක අනිවාර්යයි
-    tls: {
-        servername: 'smtp.gmail.com',
-        rejectUnauthorized: false
+        user: (process.env.EMAIL_USER || '').trim(),
+        pass: (process.env.EMAIL_PASS || '').replace(/\s+/g, '')
     }
 });
-
 const sendStatusEmail = async (userEmail, userName, type, status) => {
     try {
         const statusText = status === 'Active' ? 'අනුමත කර (Active) ඇත ✅' : 'තාවකාලිකව අත්හිටුවා (Suspended) ඇත ❌';
