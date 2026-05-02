@@ -20,7 +20,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 })();
 
 // We will try "gemini-1.5-flash-latest" as it is the most robust alias
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-002" });
 
 // System Prompt for Gemini to give it context about VillageFlow
 const getSystemPrompt = (lang) => {
