@@ -6,7 +6,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // Gemini Configuration
 // Ensure GEMINI_API_KEY is set in your .env file
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-002" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // System Prompt for Gemini to give it context about VillageFlow
 const getSystemPrompt = (lang) => {
@@ -39,9 +39,9 @@ const getSystemPrompt = (lang) => {
 router.post('/chat', async (req, res) => {
     try {
         let { message, userRole = 'citizen', lang = 'si' } = req.body;
-        
+
         console.log(`📨 Chat (AI) - Lang: ${lang}, Role: ${userRole}, Msg: "${message?.substring(0, 50)}..."`);
-        
+
         if (!message || message.trim() === '') {
             return res.json({ success: true, reply: "Please type a question." });
         }
@@ -54,9 +54,9 @@ router.post('/chat', async (req, res) => {
         // Verify API Key
         if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('EXAMPLE')) {
             console.error("❌ GEMINI_API_KEY is missing or invalid in .env");
-            return res.json({ 
-                success: true, 
-                reply: "සමාවන්න, AI සහායකයා දැනට ක්‍රියාත්මක නොවේ. කරුණාකර පසුව නැවත උත්සාහ කරන්න හෝ 1900 අමතන්න." 
+            return res.json({
+                success: true,
+                reply: "සමාවන්න, AI සහායකයා දැනට ක්‍රියාත්මක නොවේ. කරුණාකර පසුව නැවත උත්සාහ කරන්න හෝ 1900 අමතන්න."
             });
         }
 
@@ -68,21 +68,21 @@ router.post('/chat', async (req, res) => {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const reply = response.text();
-        
+
         console.log(`✅ AI Response generated successfully`);
         res.json({ success: true, reply });
-        
+
     } catch (error) {
         console.error('❌ Gemini Error:', error.message);
-        
+
         // Use req.body.lang if lang is not yet defined
         const currentLang = req.body.lang || 'si';
-        
+
         // Return a helpful fallback message if Gemini fails (e.g. quota limit)
-        const fallback = currentLang === 'si' 
-            ? "සමාවන්න, සේවාදායකයේ කාර්යබහුල තාවයක් පවතී. කරුණාකර සුළු මොහොතකින් නැවත උත්සාහ කරන්න." 
+        const fallback = currentLang === 'si'
+            ? "සමාවන්න, සේවාදායකයේ කාර්යබහුල තාවයක් පවතී. කරුණාකර සුළු මොහොතකින් නැවත උත්සාහ කරන්න."
             : "Sorry, I'm having trouble connecting to my brain right now. Please try again in a moment.";
-            
+
         res.json({ success: true, reply: fallback });
     }
 });
