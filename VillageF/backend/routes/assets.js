@@ -108,7 +108,7 @@ router.put('/reminders/:id/resolve', async (req, res) => {
         const reminder = await MaintenanceReminder.findByIdAndUpdate(
             req.params.id,
             { status: 'resolved', resolvedDate: new Date() },
-            { new: true }
+            { returnDocument: 'after' }
         );
         res.json(reminder);
     } catch (err) {
@@ -385,7 +385,7 @@ router.post('/add', async (req, res) => {
 
 router.put('/update/:id', async (req, res) => {
     try {
-        const updatedAsset = await Asset.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedAsset = await Asset.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
         res.json(updatedAsset);
     } catch (err) {
         res.status(500).json({ error: err.message });
