@@ -9,16 +9,18 @@ const nodemailer = require('nodemailer');
 
 // --- EMAIL CONFIGURATION (Credentials from .env file) ---
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Port 587 සඳහා මේක false විය යුතුයි
+    // smtp.gmail.com වෙනුවට කෙලින්ම IPv4 address එකක් පාවිච්චි කරන්න
+    host: '74.125.136.108', 
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    family: 4, // IPv4 තවදුරටත් අවශ්‍යයි
+    // Server එකේ නම (Certificates) තහවුරු කිරීමට මේක අනිවාර්යයි
     tls: {
-        rejectUnauthorized: false // Timeout එක මඟහරවා ගැනීමට උදව් වේ
+        servername: 'smtp.gmail.com',
+        rejectUnauthorized: false
     }
 });
 
