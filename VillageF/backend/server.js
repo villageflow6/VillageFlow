@@ -45,21 +45,7 @@ if (!fs.existsSync(uploadDir)) {
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || "villageflow_secret_key";
 
-app.use('/uploads', (req, res, next) => {
-    // Secret bypass for public images if any (none currently identified as non-sensitive)
-    const token = req.query.token || (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null);
-    
-    if (!token) {
-        return res.status(403).json({ msg: "Access Denied: Authentication required for documents" });
-    }
-
-    try {
-        jwt.verify(token, JWT_SECRET);
-        next();
-    } catch (err) {
-        return res.status(401).json({ msg: "Invalid or expired token" });
-    }
-}, express.static(uploadDir));
+app.use('/uploads', express.static(uploadDir));
 
 // නව: System Config Middleware අවශ්‍ය Models
 const SystemConfig = require('./models/SystemConfig');
