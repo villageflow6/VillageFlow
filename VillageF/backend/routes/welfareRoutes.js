@@ -129,9 +129,15 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 // Apply for welfare
-router.post('/apply', upload.single('paySlip'), async (req, res) => {
+router.post('/apply', upload.fields([
+    { name: 'paySlip', maxCount: 1 },
+    { name: 'nicImage', maxCount: 1 }
+]), async (req, res) => {
     try {
         const { fullName, nic, householdNo, type, monthlyIncome, userId } = req.body;
+        
+        const paySlipFile = req.files && req.files['paySlip'] ? req.files['paySlip'][0] : null;
+        const nicImageFile = req.files && req.files['nicImage'] ? req.files['nicImage'][0] : null;
         
         if (!monthlyIncome) {
             return res.status(400).json({ error: "මාසික ආදායම ඇතුළත් කිරීම අනිවාර්යයි" });
@@ -160,7 +166,8 @@ router.post('/apply', upload.single('paySlip'), async (req, res) => {
             type,
             income: monthlyIncome,
             amount: 0,
-            paySlip: req.file ? req.file.path : null,
+            paySlip: paySlipFile ? paySlipFile.path : null,
+            nicImage: nicImageFile ? nicImageFile.path : null,
             userId: userId || null,
             userEmail: userEmail,
             status: 'Pending',
