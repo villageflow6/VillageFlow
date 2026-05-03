@@ -32,6 +32,10 @@ const CertificateSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    nicImage: {
+        type: String,
+        default: null
+    },
     status: {
         type: String,
         enum: ['Pending', 'Approved', 'Rejected'],
