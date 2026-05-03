@@ -8,7 +8,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -27,7 +26,7 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 })); 
 app.use(cors()); 
-app.use(mongoSanitize()); // Prevent NoSQL injection attacks
+// app.use(mongoSanitize()); // Disabled due to Express 5 compatibility issue (req.query is read-only)
 
 // PDF සහ විශාල දත්ත (Base64) සඳහා Body Limit එක වැඩි කිරීම
 app.use(express.json({ limit: '50mb' })); 
