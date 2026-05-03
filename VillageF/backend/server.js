@@ -12,6 +12,9 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// Enable trust proxy for Render/Cloud environments (required for rate-limiting)
+app.set('trust proxy', 1);
+
 // පද්ධතිය පණගැන්වීමේදී Environment Variables පරීක්ෂා කිරීම
 console.log("MONGO_URI →", process.env.MONGO_URI);
 console.log("PORT →", process.env.PORT);
