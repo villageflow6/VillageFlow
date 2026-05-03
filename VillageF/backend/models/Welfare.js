@@ -13,6 +13,7 @@ const WelfareSchema = new mongoose.Schema({
         default: 'Pending' 
     },
     paySlip: { type: String, default: null },
+    nicImage: { type: String, default: null },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     userEmail: { type: String, default: null },
     editHistory: [{
