@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // 🔐 JWT Secret & Official Key
-const JWT_SECRET = "villageflow_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET || "villageflow_secret_key";
 const OFFICIAL_KEY = "SL-GOV-2026";
 
 // ✅ Helper: Age calculation from Date of Birth
