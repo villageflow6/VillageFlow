@@ -151,10 +151,14 @@ router.get('/verify/:id', async (req, res) => {
 
 // 5. CREATE APPLICATION (WITH PAYMENT)
 router.post('/apply', upload.fields([
-    { name: 'utilityBill', maxCount: 1 }
+    { name: 'utilityBill', maxCount: 1 },
+    { name: 'nicImage', maxCount: 1 }
 ]), async (req, res) => {
     try {
         console.log("📝 Received application data:", req.body);
+        
+        const utilityBillFile = req.files && req.files['utilityBill'] ? req.files['utilityBill'][0] : null;
+        const nicImageFile = req.files && req.files['nicImage'] ? req.files['nicImage'][0] : null;
 
         const {
             nic,
@@ -168,8 +172,6 @@ router.post('/apply', upload.fields([
             transactionId,
             paymentAmount
         } = req.body;
-
-        const utilityBillFile = req.files && req.files['utilityBill'] ? req.files['utilityBill'][0] : null;
 
         if (!utilityBillFile) {
             return res.status(400).json({ error: "Required document (Utility Bill) missing" });
@@ -196,6 +198,7 @@ router.post('/apply', upload.fields([
             relationship: relationship || "Self",
             applyFor: applyFor || "Self",
             utilityBill: utilityBillFile.path,
+            nicImage: nicImageFile ? nicImageFile.path : null,
             paymentStatus: paymentStatus === 'completed' ? 'completed' : 'pending',
             paymentMethod: paymentMethod || null,
             transactionId: transactionId || null,
