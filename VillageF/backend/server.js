@@ -43,7 +43,7 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = "villageflow_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET || "villageflow_secret_key";
 
 app.use('/uploads', (req, res, next) => {
     // Secret bypass for public images if any (none currently identified as non-sensitive)
