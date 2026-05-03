@@ -317,7 +317,9 @@ router.get('/user/:id', async (req, res) => {
         if (!user) return res.status(404).json({ msg: "User not found" });
         
         // If the request comes from a browser (not a JSON request), return a pretty HTML page
-        const isBrowser = req.headers.accept && (req.headers.accept.includes('text/html') || req.headers.accept.includes('*/*'));
+        const acceptHeader = req.headers.accept || '';
+        const isJsonRequest = acceptHeader.includes('application/json');
+        const isBrowser = !isJsonRequest && (acceptHeader.includes('text/html') || acceptHeader.includes('*/*'));
         
         if (isBrowser && !req.xhr && !req.headers['x-requested-with']) {
             return res.send(`
