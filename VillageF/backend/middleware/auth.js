@@ -10,7 +10,9 @@ const auth = (req, res, next) => {
     const token = authHeader.replace('Bearer ', '');
 
     try {
-        const decoded = jwt.verify(token, 'villageflow_secret_key');
+        // Hardcoded fallback to match the login route exactly
+        const secret = process.env.JWT_SECRET || 'SL_GOV_VILLAGE_FLOW_2026';
+        const decoded = jwt.verify(token, secret);
         
         // Payload එකේ තියෙන්නේ { user: { id, role } } නිසා 
         // req.user එකට කෙලින්ම user object එක ලබා දෙනවා
